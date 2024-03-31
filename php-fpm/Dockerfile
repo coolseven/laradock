@@ -28,13 +28,16 @@ ENV DEBIAN_FRONTEND noninteractive
 ARG CHANGE_SOURCE=false
 RUN if [ ${CHANGE_SOURCE} = true ]; then \
     # Change application source from deb.debian.org to aliyun source
-    sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/' /etc/apt/sources.list && \
-    sed -i 's/security.debian.org/mirrors.tuna.tsinghua.edu.cn/' /etc/apt/sources.list && \
-    sed -i 's/security-cdn.debian.org/mirrors.tuna.tsinghua.edu.cn/' /etc/apt/sources.list \
+#    sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/' /etc/apt/sources.list && \
+#    sed -i 's/security.debian.org/mirrors.tuna.tsinghua.edu.cn/' /etc/apt/sources.list && \
+#    sed -i 's/security-cdn.debian.org/mirrors.tuna.tsinghua.edu.cn/' /etc/apt/sources.list \
+    sed -i 's#deb.debian.org/debian$#mirrors.tuna.tsinghua.edu.cn/debian#' /etc/apt/sources.list.d/debian.sources \
 ;fi
 
 # always run apt update when start and after add new source list, then clean up at end.
-RUN set -xe; \
+RUN export https_proxy='http://192.168.0.105:7890' && \
+    export http_proxy='http://192.168.0.105:7890' && \
+    set -xe; \
     apt-get update -yqq && \
     pecl channel-update pecl.php.net && \
     apt-get install -yqq \
@@ -824,6 +827,8 @@ ARG IMAGEMAGICK_VERSION=latest
 ENV IMAGEMAGICK_VERSION ${IMAGEMAGICK_VERSION}
 
 RUN if [ ${INSTALL_IMAGEMAGICK} = true ]; then \
+    export https_proxy='http://192.168.0.105:7890' && \
+    export http_proxy='http://192.168.0.105:7890' && \
     apt-get update && \
     apt-get install -yqq libmagickwand-dev imagemagick && \
     if [ $(php -r "echo PHP_MAJOR_VERSION;") = "8" ]; then \
@@ -1349,6 +1354,13 @@ RUN set -eux; \
       php -m  | grep -q 'event' \
 ;fi
 
+RUN set -eux; \
+    docker-php-ext-install sockets
+
+#RUN set -eux; \
+#    docker-php-ext-install sockets &&\
+#    docker-php-ext-enable xdebug
+
 ###########################################################################
 # DNS utilities:
 ###########################################################################
@@ -1366,6 +1378,8 @@ RUN if [ ${INSTALL_DNSUTILS} = true ]; then \
 ###########################################################################
 
 RUN set -xe; php -v | grep -q "PHP ${LARADOCK_PHP_VERSION}."
+
+RUN apt-get update && apt-get install -y vim wget curl htop
 
 #
 #--------------------------------------------------------------------------

@@ -764,6 +764,8 @@ ARG NVM_NODEJS_ORG_MIRROR
 ENV NVM_NODEJS_ORG_MIRROR ${NVM_NODEJS_ORG_MIRROR}
 
 RUN if [ ${INSTALL_NODE} = true ]; then \
+     export https_proxy='http://192.168.0.105:7890' && \
+     export http_proxy='http://192.168.0.105:7890' && \
     # Install nvm (A Node Version Manager)
     mkdir -p $NVM_DIR && \
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash \
