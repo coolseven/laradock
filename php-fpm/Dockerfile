@@ -35,9 +35,7 @@ RUN if [ ${CHANGE_SOURCE} = true ]; then \
 ;fi
 
 # always run apt update when start and after add new source list, then clean up at end.
-RUN export https_proxy='http://192.168.0.105:7890' && \
-    export http_proxy='http://192.168.0.105:7890' && \
-    set -xe; \
+RUN set -xe; \
     apt-get update -yqq && \
     pecl channel-update pecl.php.net && \
     apt-get install -yqq \
@@ -240,24 +238,6 @@ RUN if [ ${INSTALL_XDEBUG} = true ]; then \
   fi && \
   docker-php-ext-enable xdebug \
 ;fi
-
-# Copy xdebug configuration for remote debugging
-COPY ./xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
-
-RUN if [ $(php -r "echo PHP_MAJOR_VERSION;") = "8" ] || { [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ] && { [ $(php -r "echo PHP_MINOR_VERSION;") = "4" ] || [ $(php -r "echo PHP_MINOR_VERSION;") = "3" ] ;} ;}; then \
-  sed -i "s/xdebug.remote_host=/xdebug.client_host=/" /usr/local/etc/php/conf.d/xdebug.ini && \
-  sed -i "s/xdebug.remote_connect_back=0/xdebug.discover_client_host=false/" /usr/local/etc/php/conf.d/xdebug.ini && \
-  sed -i "s/xdebug.remote_port=9000/xdebug.client_port=${XDEBUG_PORT}/" /usr/local/etc/php/conf.d/xdebug.ini && \
-  sed -i "s/xdebug.profiler_enable=0/; xdebug.profiler_enable=0/" /usr/local/etc/php/conf.d/xdebug.ini && \
-  sed -i "s/xdebug.profiler_output_dir=/xdebug.output_dir=/" /usr/local/etc/php/conf.d/xdebug.ini && \
-  sed -i "s/xdebug.remote_mode=req/; xdebug.remote_mode=req/" /usr/local/etc/php/conf.d/xdebug.ini && \
-  sed -i "s/xdebug.remote_autostart=0/xdebug.start_with_request=yes/" /usr/local/etc/php/conf.d/xdebug.ini && \
-  sed -i "s/xdebug.remote_enable=0/xdebug.mode=debug/" /usr/local/etc/php/conf.d/xdebug.ini \
-;else \
-  sed -i "s/xdebug.remote_autostart=0/xdebug.remote_autostart=1/" /usr/local/etc/php/conf.d/xdebug.ini && \
-  sed -i "s/xdebug.remote_enable=0/xdebug.remote_enable=1/" /usr/local/etc/php/conf.d/xdebug.ini \
-;fi
-RUN sed -i "s/xdebug.cli_color=0/xdebug.cli_color=1/" /usr/local/etc/php/conf.d/xdebug.ini
 
 ###########################################################################
 # pcov:
@@ -827,8 +807,6 @@ ARG IMAGEMAGICK_VERSION=latest
 ENV IMAGEMAGICK_VERSION ${IMAGEMAGICK_VERSION}
 
 RUN if [ ${INSTALL_IMAGEMAGICK} = true ]; then \
-    export https_proxy='http://192.168.0.105:7890' && \
-    export http_proxy='http://192.168.0.105:7890' && \
     apt-get update && \
     apt-get install -yqq libmagickwand-dev imagemagick && \
     if [ $(php -r "echo PHP_MAJOR_VERSION;") = "8" ]; then \
@@ -1354,12 +1332,78 @@ RUN set -eux; \
       php -m  | grep -q 'event' \
 ;fi
 
+
+############################################################################
+## Opentelemetry:
+############################################################################
+USER root
+
+ARG INSTALL_OPENTELEMETRY=false
+
+RUN set -eux; \
+  if [ ${INSTALL_OPENTELEMETRY} = true ]; then \
+      pecl install opentelemetry  &&\
+      docker-php-ext-enable opentelemetry &&\
+      php -m  | grep -q 'opentelemetry' \
+;fi
+
+
+###########################################################################
+# Grpc:
+###########################################################################
+USER root
+ARG INSTALL_GRPC=false
+
+RUN set -eux; \
+  if [ ${INSTALL_GRPC} = true ]; then \
+      pecl install grpc  &&\
+      docker-php-ext-enable grpc &&\
+      php -m  | grep -q 'grpc' \
+;fi
+
+
+
+###########################################################################
+# Protobuf:
+###########################################################################
+USER root
+ARG INSTALL_PROTOBUF=false
+
+RUN set -eux; \
+  if [ ${INSTALL_PROTOBUF} = true ]; then \
+      pecl install protobuf  &&\
+      docker-php-ext-enable protobuf &&\
+      php -m  | grep -q 'protobuf' \
+;fi
+
+
+
+###########################################################################
+# Protoc:
+###########################################################################
+ARG INSTALL_PROTOC=false
+ARG PROTOC_VERSION
+
+RUN if [ ${INSTALL_PROTOC} = true ]; then \
+  apt-get -yqq install sudo wget unzip && \
+  if [ ${PROTOC_VERSION} = "latest" ]; then \
+    REAL_PROTOC_VERSION=$(curl -s https://api.github.com/repos/protocolbuffers/protobuf/releases/latest | \
+      sed -nr 's/.*"tag_name":\s?"v(.+?)".*/\1/p'); \
+  else \
+    REAL_PROTOC_VERSION=${PROTOC_VERSION}; \
+  fi && \
+  PROTOC_ZIP=protoc-${REAL_PROTOC_VERSION}-linux-x86_64.zip; \
+  wget https://github.com/protocolbuffers/protobuf/releases/download/v${REAL_PROTOC_VERSION}/${PROTOC_ZIP} && \
+  unzip -q -o ${PROTOC_ZIP} -d /usr/local bin/protoc && \
+  unzip -q -o ${PROTOC_ZIP} -d /usr/local 'include/*' && \
+  rm -f ${PROTOC_ZIP} && \
+  chmod +x /usr/local/bin/protoc && \
+  chmod -R +r /usr/local/include/google \
+;fi
+
+
 RUN set -eux; \
     docker-php-ext-install sockets
-
-#RUN set -eux; \
-#    docker-php-ext-install sockets &&\
-#    docker-php-ext-enable xdebug
 
 ###########################################################################
 # DNS utilities:
@@ -1380,6 +1424,30 @@ RUN if [ ${INSTALL_DNSUTILS} = true ]; then \
 RUN set -xe; php -v | grep -q "PHP ${LARADOCK_PHP_VERSION}."
 
 RUN apt-get update && apt-get install -y vim wget curl htop
+
+
+###########################################################################
+# Composer Globally:
+###########################################################################
+COPY --from=composer/composer:2-bin /composer /usr/bin/composer
+
+# Copy xdebug configuration for remote debugging
+COPY ./xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+
+RUN if [ $(php -r "echo PHP_MAJOR_VERSION;") = "8" ] || { [ $(php -r "echo PHP_MAJOR_VERSION;") = "7" ] && { [ $(php -r "echo PHP_MINOR_VERSION;") = "4" ] || [ $(php -r "echo PHP_MINOR_VERSION;") = "3" ] ;} ;}; then \
+  sed -i "s/xdebug.remote_host=/xdebug.client_host=/" /usr/local/etc/php/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_connect_back=0/xdebug.discover_client_host=false/" /usr/local/etc/php/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_port=9000/xdebug.client_port=${XDEBUG_PORT}/" /usr/local/etc/php/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.profiler_enable=0/; xdebug.profiler_enable=0/" /usr/local/etc/php/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.profiler_output_dir=/xdebug.output_dir=/" /usr/local/etc/php/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_mode=req/; xdebug.remote_mode=req/" /usr/local/etc/php/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_autostart=0/xdebug.start_with_request=yes/" /usr/local/etc/php/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_enable=0/xdebug.mode=debug/" /usr/local/etc/php/conf.d/xdebug.ini \
+;else \
+  sed -i "s/xdebug.remote_autostart=0/xdebug.remote_autostart=1/" /usr/local/etc/php/conf.d/xdebug.ini && \
+  sed -i "s/xdebug.remote_enable=0/xdebug.remote_enable=1/" /usr/local/etc/php/conf.d/xdebug.ini \
+;fi
+RUN sed -i "s/xdebug.cli_color=0/xdebug.cli_color=1/" /usr/local/etc/php/conf.d/xdebug.ini
 
 #
 #--------------------------------------------------------------------------

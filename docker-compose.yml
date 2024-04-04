@@ -179,6 +179,11 @@ services:
         - INSTALL_DNSUTILS=${WORKSPACE_INSTALL_DNSUTILS}
         - INSTALL_POPPLER_UTILS=${WORKSPACE_INSTALL_POPPLER_UTILS}
         - INSTALL_JDK=${WORKSPACE_INSTALL_JDK}
+        - INSTALL_OPENTELEMETRY=${PHP_FPM_INSTALL_OPENTELEMETRY}
+        - INSTALL_GRPC=${WORKSPACE_INSTALL_GRPC}
+        - INSTALL_PROTOBUF=${WORKSPACE_INSTALL_PROTOBUF}
+        - INSTALL_PROTOC=${WORKSPACE_INSTALL_PROTOC}
+        - PROTOC_VERSION=${WORKSPACE_PROTOC_VERSION}
         - http_proxy
         - https_proxy
         - no_proxy
@@ -299,6 +304,11 @@ services:
         - INSTALL_DOCKER_CLIENT=${PHP_FPM_INSTALL_DOCKER_CLIENT}
         - INSTALL_DNSUTILS=${PHP_FPM_INSTALL_DNSUTILS}
         - INSTALL_POPPLER_UTILS=${PHP_FPM_INSTALL_POPPLER_UTILS}
+        - INSTALL_OPENTELEMETRY=${PHP_FPM_INSTALL_OPENTELEMETRY}
+        - INSTALL_GRPC=${PHP_FPM_INSTALL_GRPC}
+        - INSTALL_PROTOBUF=${PHP_FPM_INSTALL_PROTOBUF}
+        - INSTALL_PROTOC=${PHP_FPM_INSTALL_PROTOC}
+        - PROTOC_VERSION=${PHP_FPM_PROTOC_VERSION}
         - http_proxy
         - https_proxy
         - no_proxy
@@ -320,6 +330,16 @@ services:
       - DOCKER_TLS_CERTDIR=/certs
       - DOCKER_CERT_PATH=/certs/client
       - FAKETIME=${PHP_FPM_FAKETIME}
+      - OTEL_PHP_AUTOLOAD_ENABLED=true
+      - OTEL_SERVICE_NAME=siweiker-huzhongyuan-com
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      #- OTEL_EXPORTER_OTLP_ENDPOINT = "http://tracing-analysis-dc-sz-internal.aliyuncs.com:8090"
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tracing-analysis-dc-sz.aliyuncs.com:8090
+      - OTEL_EXPORTER_OTLP_HEADERS=Authentication=fkvl6sfsuq@51f8ad114d2804c_fkvl6sfsuq@53df7ad2afe8301
+      - OTEL_PROPAGATORS=baggage,tracecontext
     depends_on:
       - workspace
     networks:

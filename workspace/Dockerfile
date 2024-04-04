@@ -764,8 +764,6 @@ ARG NVM_NODEJS_ORG_MIRROR
 ENV NVM_NODEJS_ORG_MIRROR ${NVM_NODEJS_ORG_MIRROR}
 
 RUN if [ ${INSTALL_NODE} = true ]; then \
-     export https_proxy='http://192.168.0.105:7890' && \
-     export http_proxy='http://192.168.0.105:7890' && \
     # Install nvm (A Node Version Manager)
     mkdir -p $NVM_DIR && \
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash \
@@ -1845,6 +1843,60 @@ RUN set -eux; \
       ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/event.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/30-event.ini && \
       php -m  | grep -q 'event' \
 ;fi
+
+
+############################################################################
+## Opentelemetry:
+############################################################################
+USER root
+
+ARG INSTALL_OPENTELEMETRY=false
+
+RUN set -eux; \
+  if [ ${INSTALL_OPENTELEMETRY} = true ]; then \
+      pecl install opentelemetry  &&\
+      echo "extension=opentelemetry.so" >> /etc/php/${LARADOCK_PHP_VERSION}/mods-available/opentelemetry.ini && \
+      ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/opentelemetry.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/30-opentelemetry.ini && \
+      php -m  | grep -q 'opentelemetry' \
+;fi
+
+
+###########################################################################
+# Grpc:
+###########################################################################
+USER root
+ARG INSTALL_GRPC=false
+
+RUN set -eux; \
+  if [ ${INSTALL_GRPC} = true ]; then \
+      pecl install grpc  &&\
+      echo "extension=grpc.so" >> /etc/php/${LARADOCK_PHP_VERSION}/mods-available/grpc.ini && \
+      ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/grpc.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/30-grpc.ini && \
+      php -m  | grep -q 'grpc' \
+;fi
+
+
+
+###########################################################################
+# Protobuf:
+###########################################################################
+USER root
+ARG INSTALL_PROTOBUF=false
+
+RUN set -eux; \
+  if [ ${INSTALL_PROTOBUF} = true ]; then \
+      pecl install protobuf  &&\
+      echo "extension=protobuf.so" >> /etc/php/${LARADOCK_PHP_VERSION}/mods-available/protobuf.ini && \
+      ln -s /etc/php/${LARADOCK_PHP_VERSION}/mods-available/protobuf.ini /etc/php/${LARADOCK_PHP_VERSION}/cli/conf.d/30-protobuf.ini && \
+      php -m  | grep -q 'protobuf' \
+;fi
+
+
+
+
+
+
+
 
 ###########################################################################
 # DNS utilities:
